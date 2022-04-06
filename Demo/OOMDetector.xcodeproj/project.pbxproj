@@ -335,7 +335,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = JVT843N4EQ;
+				DEVELOPMENT_TEAM = SY57HT4M86;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -351,7 +351,7 @@
 					"-force_load",
 					"$(BUILT_PRODUCTS_DIR)/libOOMDetector.framework/libOOMDetector",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.tencent.rosen;
+				PRODUCT_BUNDLE_IDENTIFIER = com.helloworld.rosen;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -367,7 +367,7 @@
 				CLANG_ENABLE_OBJC_ARC = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = JVT843N4EQ;
+				DEVELOPMENT_TEAM = SY57HT4M86;
 				GCC_PREPROCESSOR_DEFINITIONS = Build_For_Extern;
 				INFOPLIST_FILE = OOMDetectorDemo/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
@@ -378,7 +378,7 @@
 					"-force_load",
 					"$(BUILT_PRODUCTS_DIR)/libOOMDetector.framework/libOOMDetector",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.tencent.rosen;
+				PRODUCT_BUNDLE_IDENTIFIER = com.helloworld.rosen;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				TARGETED_DEVICE_FAMILY = "1,2";

@@ -32,6 +32,8 @@
     return manager;
 }
 
+#pragma  mark - <QQOOMPerformanceDataDelegate>
+
 - (void)performanceData:(NSDictionary *)data completionHandler:(void (^)(BOOL))completionHandler
 {
 //    NSLog(@"%@ \n", data);
@@ -39,6 +41,9 @@
     completionHandler(YES);
 }
 
+#pragma mark - <QQOOMFileDataDelegate>
+
+/** 在出现单次大块内存分配、检查到内存泄漏且时、调用uploadAllStack方法时触发回调 */
 - (void)fileData:(NSData *)data extra:(NSDictionary<NSString *,NSString *> *)extra type:(QQStackReportType)type completionHandler:(void (^)(BOOL))completionHandler
 {
 //    NSLog(@"\n %@ \n %ld \n %@\n", extra, type, [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);

@@ -27,18 +27,24 @@
 #import <mach/mach.h>
 #import "NSObject+FOOMSwizzle.h"
 
+// 要求 ARC 编译
 #if !__has_feature(objc_arc)
 #error This file must be compiled with ARC. Use -fobjc-arc flag.
 #endif
 
 //#undef DEBUG
+// 定义 crash 类型值，为啥不用 enum
 #define no_crash 0
 #define normal_crash 1
 #define deadlock_crash 2
 #define foom_crash 3
+
+// 定义 mmap 虚拟内存的大小
 #define foom_mmap_size 160*1024
 
 static FOOMMonitor* monitor;
+
+#pragma mark - 分别用于 hook exit 和 _exit 函数，主要是监听退出状态
 
 static void (*_orig_exit)(int);
 static void (*orig_exit)(int);
@@ -55,13 +61,14 @@ void _my_exit(int value)
     _orig_exit(value);
 }
 
-
+// app 当前运行状态，前台、后台、终止
 typedef enum{
-    APPENTERBACKGROUND,
-    APPENTERFORGROUND,
-    APPDIDTERMINATE
+    APPENTERBACKGROUND, //!< 后台
+    APPENTERFORGROUND, //!< 前台
+    APPDIDTERMINATE //!< 终止状态，这里监听的是 appdelegate 中的 terminate，注意和 isExit 区分
 }App_State;
 
+#pragma mark - UIViewController 分类，目的是hook viewDidAppear 生命周期
 @interface UIViewController(FOOM)
 
 - (void)foom_viewDidAppear:(BOOL)animated;
@@ -70,9 +77,14 @@ typedef enum{
 
 @implementation UIViewController(FOOM)
 
+/// ViewController viewDidAppear 的 hook, 处理非 （UIxxx 、_xxx 以及 Nav 类）类型的 VC 类。
+/// @param animated 是否动画
 - (void)foom_viewDidAppear:(BOOL)animated
 {
+    // 调用 origin viewDidAppear
     [self foom_viewDidAppear:animated];
+    
+    // 获取类名
     NSString *name = NSStringFromClass([self class]);
     if(
 #ifdef build_for_QQ
@@ -89,25 +101,25 @@ typedef enum{
 @interface FOOMMonitor()
 {
     NSString *_uuid;
-    NSThread *_thread;
-    NSTimer *_timer;
+    NSThread *_thread; //!< 任务执行子线程
+    NSTimer *_timer; //!< 子线程添加的 runloop 任务
     NSUInteger _memWarningTimes;
-    NSUInteger _residentMemSize;
-    App_State _appState;
+    NSUInteger _residentMemSize; //!< 常驻内存大小，或缺是
+    App_State _appState; //!< 记录 app 当前状态， 前台、后台或者终止
     HighSpeedLogger *_foomLogger;
-    BOOL _isCrashed;
-    BOOL _isDeadLock;
-    BOOL _isExit;
-    NSDictionary *_deadLockStack;
+    BOOL _isCrashed; //!< 记录是否 crash 崩溃
+    BOOL _isDeadLock; //!< 记录是否死锁
+    BOOL _isExit; //!< 记录是否退出状态。该退出指的是执行 exit / _exit 杀掉进程
+    NSDictionary *_deadLockStack; //!< 死锁堆栈 map
     NSString *_systemVersion;
-    NSString *_appVersion;
-    NSTimeInterval _ocurTime;
-    NSTimeInterval _startTime;
-    NSRecursiveLock *_logLock;
+    NSString *_appVersion; //!< app version 版本号， demo 里是给的字符串，不是数组版本号。
+    NSTimeInterval _ocurTime; //!< 记录上次内存读取时间
+    NSTimeInterval _startTime; //!< FOOM 开启运行时间
+    NSRecursiveLock *_logLock; //!< 打印的锁对象
     NSString *_currentLogPath;
-    BOOL _isDetectorStarted;
+    BOOL _isDetectorStarted; //!< 监控开启状态
     BOOL _isOOMDetectorOpen;
-    NSString *_crash_stage;
+    NSString *_crash_stage; //!< 记录当前 crash 的标识符， 这里用的是 VC 的类名。 _updateStage中处理。
 }
 
 @end
@@ -140,6 +152,8 @@ typedef enum{
 {
     [_logLock lock];
     [self hookExitAndAbort];
+    
+    // hook vc 的 viewDidAppear
     [self swizzleMethods];
     NSString *dir = [self foomMemoryDir];
     _systemVersion = [[NSProcessInfo processInfo] operatingSystemVersionString];
@@ -174,9 +188,15 @@ typedef enum{
     return _currentLogPath;
 }
 
+/// 开启 FOOM 检测
 -(void)start
 {
+    // 重置状态值
+    
+    // 赋值开启状态
     _isDetectorStarted = YES;
+    
+    // 设置当前 app 状态，
     if([UIApplication sharedApplication].applicationState == UIApplicationStateBackground)
     {
         _appState = APPENTERBACKGROUND;
@@ -184,14 +204,18 @@ typedef enum{
     else {
         _appState = APPENTERFORGROUND;
     }
+    
     _isCrashed = NO;
     _isExit = NO;
     _isDeadLock = NO;
     _ocurTime = [[NSDate date] timeIntervalSince1970];
     _startTime = _ocurTime;
+    
+    // 通过 SDK 内部的子线程创建文件和虚拟内存的映射（mmap）
     [self performSelector:@selector(createmmapLogger) onThread:_thread withObject:nil waitUntilDone:NO];
 }
 
+/// 通过 fishhook hook 系统的_exit 和 exit 退出函数
 -(void)hookExitAndAbort
 {
     rebind_symbols((struct rebinding[2]){{"_exit", (void *)_my_exit, (void **)&_orig_exit}, {"exit", (void *)my_exit, (void **)&orig_exit}}, 2);
@@ -199,50 +223,74 @@ typedef enum{
 
 -(void)swizzleMethods
 {
+    // hook ViewController 的 viewDidAppear
     [UIViewController swizzleMethod:@selector(viewDidAppear:) withMethod:@selector(foom_viewDidAppear:)];
 }
 
 
 -(void)threadMain
 {
+    // 开启子线程的 runloop
     [[NSRunLoop currentRunLoop] addTimer:_timer forMode:NSRunLoopCommonModes];
     [[NSRunLoop currentRunLoop] run];
     [_timer fire];
 }
 
+/// 更新常驻内存 resident 类型的值
 -(void)updateMemory
 {
     [_logLock lock];
-    if(_appState == APPENTERFORGROUND){
+    if(_appState == APPENTERFORGROUND)
+    {
+        // 通过 task 获取常驻物理内存的大小
         NSUInteger memSize = (NSUInteger)[self appResidentMemory];
-        if(_isDeadLock){
-            if(abs((int)(_residentMemSize - memSize)) < 5){
+        // 判断是否死锁
+        if(_isDeadLock)
+        {
+            // 死锁状态下，和上次的 resident 内存绝对差值在 5MB 以内，没影响则直接忽略
+            if(abs((int)(_residentMemSize - memSize)) < 5)
+            {
                 //卡死状态下内存无明显变化就不update了，避免CPU过高发热
                 [_logLock unlock];
                 return ;
             }
         }
+        
+        // 更新最新的 resident 的值
         _residentMemSize = memSize;
     }
+    
+    // 记录上次更新时间
     _ocurTime = [[NSDate date] timeIntervalSince1970];
     [self updateFoomData];
     [_logLock unlock];
 }
 
+/// 更新日志数据到虚拟内存中。清理上次缓存
 -(void)updateFoomData{
-    if(_foomLogger && _foomLogger->isValid()){
+    if(_foomLogger && _foomLogger->isValid())
+    {
+        // 常驻虚拟内存的大小，获取的是 resident 的值。
         NSString* residentMemory = [NSString stringWithFormat:@"%lu", (unsigned long)_residentMemSize];
+        
         NSDictionary *foomDict = [NSDictionary dictionaryWithObjectsAndKeys:residentMemory,@"lastMemory",[NSNumber numberWithUnsignedLongLong:_memWarningTimes],@"memWarning",_uuid,@"uuid",_systemVersion,@"systemVersion",_appVersion,@"appVersion",[NSNumber numberWithInt:(int)_appState],@"appState",[NSNumber numberWithBool:_isCrashed],@"isCrashed",[NSNumber numberWithBool:_isDeadLock],@"isDeadLock",_deadLockStack ? _deadLockStack : @"",@"deadlockStack",[NSNumber numberWithBool:_isExit],@"isExit",[NSNumber numberWithDouble:_ocurTime],@"ocurTime",[NSNumber numberWithDouble:_startTime],@"startTime",[NSNumber numberWithBool:_isOOMDetectorOpen],@"isOOMDetectorOpen",_crash_stage,@"crash_stage",nil];
+        
+        // 归档为二进制
         NSData *foomData = [NSKeyedArchiver archivedDataWithRootObject:foomDict];
-        if(foomData && [foomData length] > 0){
+        if(foomData && [foomData length] > 0)
+        {
+            // 清空 FOOM 日志
             _foomLogger->cleanLogger();
             int32_t length = (int32_t)[foomData length];
-            if(!_foomLogger->memcpyLogger((const char *)&length, 4)){
+            
+            if(!_foomLogger->memcpyLogger((const char *)&length, 4))
+            {
                 [[NSFileManager defaultManager] removeItemAtPath:_currentLogPath error:nil];
                 delete _foomLogger;
                 _foomLogger = NULL;
             }
-            else {
+            else
+            {
                 if(!_foomLogger->memcpyLogger((const char *)[foomData bytes],[foomData length])){
                     [[NSFileManager defaultManager] removeItemAtPath:_currentLogPath error:nil];
                     delete _foomLogger;
@@ -395,6 +443,7 @@ typedef enum{
     return path;
 }
 
+/// 获取 resident 的内存大小值
 - (double)appResidentMemory
 {
     mach_task_basic_info_data_t taskInfo;
@@ -419,6 +468,8 @@ typedef enum{
     [_logLock unlock];
 }
 
+/// SDK 内部的子线程更新crash identification，
+/// @param stage name
 -(void)updateStage:(NSString *)stage
 {
     [self performSelector:@selector(_updateStage:) onThread:_thread withObject:stage waitUntilDone:NO];
@@ -495,7 +546,7 @@ typedef enum{
     [_logLock unlock];
 }
 
-
+/// 更新 app 退出状态
 -(void)appExit
 {
     [_logLock lock];
@@ -523,6 +574,11 @@ typedef enum{
     [_logLock unlock];
 }
 
+/*! @brief 设置appVersion
+ *
+ * @param appVersion app版本号
+ *
+ */
 -(void)setAppVersion:(NSString *)appVersion
 {
     [_logLock lock];

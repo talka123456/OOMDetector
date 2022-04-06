@@ -32,6 +32,9 @@ typedef void (malloc_logger_t)(uint32_t type, uintptr_t arg1, uintptr_t arg2, ui
 extern malloc_logger_t* __syscall_logger;
 #endif
 
+
+/// 输出 SDK 内存log 信息
+/// @param info log信息
 static void oom_log_callback(char *info)
 {
     NSLog(@"%s",info);
@@ -49,12 +52,15 @@ NSString *const kChunkMallocNoti = @"kChunkMallocNoti";
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     [self setupWindow];
+    // 初始化，注册SDK 监控的回调函数。
     [[OOMDetector getInstance] registerLogCallback:oom_log_callback];
+    
     [self setupFOOMMonitor];
     [self setupOOMDetector];
     return YES;
 }
 
+#pragma mark - 生命周期
 - (void)applicationWillTerminate:(UIApplication *)application
 {
     [[FOOMMonitor getInstance] appWillTerminate];
@@ -91,6 +97,7 @@ NSString *const kChunkMallocNoti = @"kChunkMallocNoti";
     [[FOOMMonitor getInstance] appResumeFromDeadLock];
 }
 
+// 设置 Demo 页面展示
 - (void)setupWindow
 {
     self.window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
@@ -99,6 +106,7 @@ NSString *const kChunkMallocNoti = @"kChunkMallocNoti";
     [self.window makeKeyAndVisible];
 }
 
+/// 开启前台 OOM 监控
 - (void)setupFOOMMonitor
 {
     [[FOOMMonitor getInstance] setAppVersion:@"OOMDetector_demo"];
@@ -116,20 +124,20 @@ NSString *const kChunkMallocNoti = @"kChunkMallocNoti";
     
     // 设置捕获堆栈数据、内存log代理，在出现单次大块内存分配、检查到内存泄漏且时、调用uploadAllStack方法时会触发此回调
     [detector setFileDataDelegate:[MyOOMDataManager getInstance]];
-//
-//    // 设置app内存触顶监控数据代理，在调用startMaxMemoryStatistic:开启内存触顶监控后会触发此回调，返回前一次app运行时单次生命周期内的最大物理内存数据
+    // 设置app内存触顶监控数据代理，在调用startMaxMemoryStatistic:开启内存触顶监控后会触发此回调，返回前一次app运行时单次生命周期内的最大物理内存数据
     [detector setPerformanceDataDelegate:[MyOOMDataManager getInstance]];
-//
-//    // 单次大块内存分配监控
+    
+    // 单次大块内存分配监控
     [detector startSingleChunkMallocDetector:50 * 1024 * 1024 callback:^(size_t bytes, NSString *stack) {
         [[NSNotificationCenter defaultCenter] postNotificationName:kChunkMallocNoti object:stack];
     }];
 
     // 开启内存泄漏监控，目前只可检测真机运行时的内存泄漏，模拟器暂不支持,这个功能占用的内存较大，建议只在测试阶段使用
- //   [detector setupLeakChecker];
+    [detector setupLeakChecker];
 
     // 开启MallocStackMonitor用以监控通过malloc方式分配的内存,会增加8%左右的cpu开销和10Mb内存,所以建议抽样开启
     [detector startMallocStackMonitor:30 * 1024 * 1024 logUUID:[[FOOMMonitor getInstance] getLogUUID]];
+    
     //30K以下堆栈按10%抽样监控
 //    OOMDetector *oomdetector = [OOMDetector getInstance];
 //    [oomdetector setMallocSampleFactor:10];

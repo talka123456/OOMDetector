@@ -20,6 +20,7 @@
 
 @import libOOMDetector;
 
+/// 回调代理类
 @interface MyOOMDataManager : NSObject <QQOOMPerformanceDataDelegate, QQOOMFileDataDelegate>
 
 + (instancetype)getInstance;

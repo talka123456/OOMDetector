@@ -101,17 +101,20 @@ BOOL HighSpeedLogger::memcpyLogger(const char *content, size_t length)
     return result;
 }
 
+/// 清空
 void HighSpeedLogger::cleanLogger()
 {
     current_len = 0;
     memset(mmap_ptr, '\0', mmap_size);
 }
 
+/// 同步虚拟内存到磁盘
 void HighSpeedLogger::syncLogger()
 {
     msync(mmap_ptr, mmap_size, MS_ASYNC);
 }
 
+/// 返回是否有效
 bool HighSpeedLogger::isValid()
 {
     return !isFailed;

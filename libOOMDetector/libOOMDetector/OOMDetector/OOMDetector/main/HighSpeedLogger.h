@@ -24,6 +24,7 @@
 
 typedef void (*LogPrinter)(char *log);
 
+/// mmap 工具类
 class HighSpeedLogger
 {
 public:
