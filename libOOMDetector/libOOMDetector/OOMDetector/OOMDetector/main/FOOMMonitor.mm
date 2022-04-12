@@ -39,7 +39,7 @@
 #define deadlock_crash 2
 #define foom_crash 3
 
-// 定义 mmap 虚拟内存的大小
+// 定义 mmap 虚拟内存的大小 10 页内存页
 #define foom_mmap_size 160*1024
 
 static FOOMMonitor* monitor;
@@ -106,7 +106,7 @@ typedef enum{
     NSUInteger _memWarningTimes;
     NSUInteger _residentMemSize; //!< 常驻内存大小，或缺是
     App_State _appState; //!< 记录 app 当前状态， 前台、后台或者终止
-    HighSpeedLogger *_foomLogger;
+    HighSpeedLogger *_foomLogger; //!< mmap log 对象
     BOOL _isCrashed; //!< 记录是否 crash 崩溃
     BOOL _isDeadLock; //!< 记录是否死锁
     BOOL _isExit; //!< 记录是否退出状态。该退出指的是执行 exit / _exit 杀掉进程
@@ -273,6 +273,25 @@ typedef enum{
         // 常驻虚拟内存的大小，获取的是 resident 的值。
         NSString* residentMemory = [NSString stringWithFormat:@"%lu", (unsigned long)_residentMemSize];
         
+        /**
+         上报信息：
+         {
+            "lastMemory" : residentSize, 内存常驻大小
+            "memWarning" : _memWarningTimes, 内存告警时间
+            "uuid" :,
+            "systemVersion" : ,
+            "appVersion" : ,
+            "appState" :,
+            "isCrashed" :
+            "isDeadLock" :
+            "deadlockStack" : ,
+            "isExit" : ,
+            "ocurTime" :
+            "startTime" :,
+            "isOOMDetectorOpen" :,
+            "crash_stage" : 
+         }
+         */
         NSDictionary *foomDict = [NSDictionary dictionaryWithObjectsAndKeys:residentMemory,@"lastMemory",[NSNumber numberWithUnsignedLongLong:_memWarningTimes],@"memWarning",_uuid,@"uuid",_systemVersion,@"systemVersion",_appVersion,@"appVersion",[NSNumber numberWithInt:(int)_appState],@"appState",[NSNumber numberWithBool:_isCrashed],@"isCrashed",[NSNumber numberWithBool:_isDeadLock],@"isDeadLock",_deadLockStack ? _deadLockStack : @"",@"deadlockStack",[NSNumber numberWithBool:_isExit],@"isExit",[NSNumber numberWithDouble:_ocurTime],@"ocurTime",[NSNumber numberWithDouble:_startTime],@"startTime",[NSNumber numberWithBool:_isOOMDetectorOpen],@"isOOMDetectorOpen",_crash_stage,@"crash_stage",nil];
         
         // 归档为二进制
