@@ -27,6 +27,7 @@
 
 /**
  [C++/C--mmap()详解](https://blog.csdn.net/baidu_38172402/article/details/106673606)
+ [C语言mmap()函数：建立内存映射](http://c.biancheng.net/cpp/html/138.html)
  
  将一个文件或者其它对象映射进内存, 要求必须以内存页大小为单位，若要映射非PAGE_SIZE整数倍的地址范围，要先进行内存对齐，
  
@@ -102,7 +103,6 @@ HighSpeedLogger::HighSpeedLogger(malloc_zone_t *zone, NSString *path, size_t siz
             fseek(fp, 0, SEEK_SET);
             // 开辟虚拟内存空间， 返回该地址
             char *ptr = (char *)mmap(0, size, PROT_WRITE | PROT_READ, (MAP_FILE|MAP_SHARED), fileno(fp), 0);
-            
             // 所有字符重置为'\0'
             memset(ptr, '\0', size);
             if(ptr != NULL)

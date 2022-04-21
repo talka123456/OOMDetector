@@ -57,7 +57,7 @@ public:
     CPtrsHashmap *getPtrHashmap();
     CStacksHashmap *getStackHashmap();
 public:
-    size_t max_stack_depth = 64;
+    size_t max_stack_depth = 64; //!< 调用堆栈 dump 最大深度，默认为 64，setupConfig 设置为 50、
     BOOL needSysStack = YES;
     BOOL enableOOMMonitor = NO;
     BOOL enableChunkMonitor = NO;

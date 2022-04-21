@@ -35,7 +35,7 @@ typedef enum : NSUInteger {
 
 +(QQLeakFileUploadCenter *)defaultCenter;
 
-@property (nonatomic, assign) id<QQOOMFileDataDelegate> fileDataDelegate;
+@property (nonatomic, assign) id<QQOOMFileDataDelegate> fileDataDelegate; //!< 数据处理代理对象，demo 中就是MyOOMDataManager类
 
 -(void)fileData:(id)data extra:(NSDictionary<NSString*,NSString*> *)extra type:(QQStackReportType)type completionHandler:(void (^)(BOOL))completionHandler;
 

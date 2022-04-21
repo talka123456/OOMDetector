@@ -20,31 +20,44 @@
 
 #define POLY64REV     0x95AC9329AC4BC9B5ULL
 
+// 全局二位数组 8 * 256， 用来计算 CRC 的表
 static uint64_t crc_table[8][256];
 
 #ifdef __cplusplus
 extern "C" {
 #endif
     
+    /// 初始化 OOM 使用的 CRC64 表数据。
+    /// [C语言之——CRC-64算法](https://blog.csdn.net/l1028386804/article/details/50748724)
+    /// [CRC 实现](https://github.com/gityf/crc)
     void init_crc_table_for_oom(void)
     {
         uint64_t c;
         int n, k;
+        
+        // first 保证只有首次执行
         static int first = 1;
-        if(first){
+        if(first) {
+            // 重置状态值
             first = 0;
             for (n = 0; n < 256; n++)
             {
                 c = (uint64_t)n;
+                
+                // 遍历 8 次的原因是啥? 256 = 2^8
                 for (k = 0; k < 8; k++)
                 {
+                    // 如果是奇数， 则除 2 然后进行无（进位/借位）模二加减运算
+                    // 模 2 加减运算实际就是异或操作 0(+/-)0 = 0、0(+/-)1 = 1、 1(+/-)0 = 1、 1(+/-)1 = 0
                     if (c & 1)
                         c = (c >> 1) ^ POLY64REV;
+                    // 如果是偶数，则直接除 2
                     else
                         c >>= 1;
                 }
                 crc_table[0][n] = c;
             }
+            
             for (n = 0; n < 256; n++) {
                 c = crc_table[0][n];
                 for (k = 1; k < 8; k++) {

@@ -20,6 +20,9 @@
 #import <malloc/malloc.h>
 #import "CStackHelper.h"
 
+/// ifdef 可以用来避免重复定义。这里的作用是条件编译，如果是 cpp 环境，则执行 extern "C"
+/// extern 'C' 是为了 C/C++混编调用。因为多态导致 Cpp 存在 name mangling, 所以实际互调时是无法找到对应符号的，所以需要告知编译器，这里的函数使用 c 语法规则参与编译和链接。
+/// 参考： https://www.cnblogs.com/skynet/archive/2010/07/10/1774964.html
 #ifdef __cplusplus
 extern "C" {
 #endif

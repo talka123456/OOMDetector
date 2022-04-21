@@ -86,7 +86,10 @@ typedef void (^ChunkMallocBlock)(size_t bytes, NSString *stack);
 
 #pragma mark -- 代理设置
 
-/** 在出现单次大块内存分配、检查到内存泄漏且时、调用uploadAllStack方法时触发此回调 */
+/**
+ 在出现单次大块内存分配、检查到内存泄漏且时、调用uploadAllStack方法时触发此回调
+ 设置为 QQLeakFileUploadCenter 的 fileDelegate
+ */
 -(void)setFileDataDelegate:(id<QQOOMFileDataDelegate>)delegate;
 
 #pragma mark -- 内存泄漏监控

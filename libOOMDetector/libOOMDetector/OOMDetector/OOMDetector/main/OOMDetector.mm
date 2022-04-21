@@ -117,6 +117,8 @@ void myChunkMallocCallback(size_t bytes, NSString *stack)
             OOMThreshhold = 800.f;
         }
     }
+    
+    // 调用栈深度最大为 50.
     [self setMaxStackDepth:50];
     [self setNeedSystemStack:YES];
     [self setNeedStacksWithoutAppStack:YES];
@@ -285,13 +287,21 @@ void myChunkMallocCallback(size_t bytes, NSString *stack)
     _enableChunkMonitor = NO;
 }
 
+/// 获取 OOM Data 堆栈信息
+/// @param uuid 唯一表示 uuid
 -(NSArray *)getOOMDataByUUID:(NSString *)uuid
 {
+    // 获取镜像堆栈信息
     NSArray *images = [self getOOMImageDataByUUID:uuid];
     NSMutableArray *stacks = [[[NSMutableArray alloc] init] autorelease];
     if(images){
+        // 获取 malloc 堆数据信息
         NSData *mallocData = [self getOOMMallocDataByUUID:uuid];
+        
+        // 获取 vm 虚拟内存信息
         NSData *vmData = [self getOOMVMDataByUUID:uuid];
+        
+        // 处理malloc & vm alloc 数据到栈
         if(mallocData.length > 0){
             NSArray *mallocStack = [self parseOOMData:mallocData images:images isVM:NO];
             [stacks addObjectsFromArray:mallocStack];
@@ -305,6 +315,10 @@ void myChunkMallocCallback(size_t bytes, NSString *stack)
     return stacks;
 }
 
+/// 解析 OOM Data
+/// @param oomData OOM Data，包含 malloc data 和 vm alloc data
+/// @param images 镜像列表
+/// @param isVM 是否为虚拟内存
 -(NSArray *)parseOOMData:(NSData *)oomData images:(NSArray *)images isVM:(BOOL)isVM
 {
     AppImages *app_images = CStackHelper::parseImages(images);
@@ -348,6 +362,9 @@ void myChunkMallocCallback(size_t bytes, NSString *stack)
     delete app_images;
     return stacks;
 }
+
+/// 获取 OOM 日志中的 images 镜像相关数据, 存储的数堆栈信息， 即 Library/OOMDetector_NEW/app.images
+/// @param uuid uuid 唯一标识
 -(NSArray *)getOOMImageDataByUUID:(NSString *)uuid
 {
     NSString *OOMDataPath = [[self OOMDataPath] stringByAppendingPathComponent:uuid];
@@ -359,6 +376,8 @@ void myChunkMallocCallback(size_t bytes, NSString *stack)
     return nil;
 }
 
+/// 获取 OOM 日志中的 Malloc 相关数据， 即 Library/OOMDetector_NEW/(uuid).mmap
+/// @param uuid uuid 唯一标识
 -(NSData *)getOOMMallocDataByUUID:(NSString *)uuid
 {
     NSString *OOMDataPath = [[self OOMDataPath] stringByAppendingPathComponent:uuid];
@@ -370,6 +389,8 @@ void myChunkMallocCallback(size_t bytes, NSString *stack)
     return nil;
 }
 
+/// 获取 OOM 日志中的 vm 相关数据， 即 Library/OOMDetector_NEW/vm_(uuid).mmap
+/// @param uuid uuid 唯一标识
 -(NSData *)getOOMVMDataByUUID:(NSString *)uuid
 {
     NSString *OOMDataPath = [[self OOMDataPath] stringByAppendingPathComponent:uuid];
@@ -381,7 +402,8 @@ void myChunkMallocCallback(size_t bytes, NSString *stack)
     return nil;
 }
 
-
+/// 删除 OOM 数据
+/// @param uuid 唯一表示 uuid
 -(void)removeOOMDataByUUID:(NSString *)uuid
 {
     NSFileManager *fm = [NSFileManager defaultManager];
@@ -389,6 +411,7 @@ void myChunkMallocCallback(size_t bytes, NSString *stack)
     [fm removeItemAtPath:OOMDataPath error:nil];
 }
 
+/// 移除沙盒路径下Library/OOMDetector_New/ 所有非当前使用日志文件的日志文件。
 -(void)clearOOMLog
 {
     NSFileManager *fm = [NSFileManager defaultManager];
@@ -396,12 +419,13 @@ void myChunkMallocCallback(size_t bytes, NSString *stack)
     NSArray *paths = [fm contentsOfDirectoryAtPath:OOMDataPath error:nil];
     for(NSString *path in paths){
         NSString *fullPath = [OOMDataPath stringByAppendingPathComponent:path];
-        if(_currentDir == nil || ![fullPath isEqualToString:_currentDir]){
+        if(_currentDir == nil || ![fullPath isEqualToString:_currentDir]) {
             [fm removeItemAtPath:fullPath error:nil];
         }
     }
 }
 
+/// 返回沙盒路径/Library/OOMDetector_New/， 用来存储堆栈和 mmap 等信息
 -(NSString *)OOMDataPath
 {
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES);
@@ -465,6 +489,7 @@ void myChunkMallocCallback(size_t bytes, NSString *stack)
 
 - (void)setFileDataDelegate:(id<QQOOMFileDataDelegate>)delegate
 {
+    // 设置为 QQLeakFileUploadCenter 的 fileDelegate
     [[QQLeakFileUploadCenter defaultCenter] setFileDataDelegate:delegate];
 }
 

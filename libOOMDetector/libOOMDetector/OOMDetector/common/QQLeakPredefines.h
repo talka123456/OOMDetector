@@ -77,7 +77,7 @@ typedef struct section section_t;
 #define stack_logging_flag_cleared	64	/* for NewEmptyHandle */
 #define stack_logging_type_mapped_file_or_shared_mem 128
 
-#define max_stack_depth_sys 64
+#define max_stack_depth_sys 64 //!< 调用栈 最大深度 默认是 64
 #define md5_length 8
 
 #endif /* QQLeakpredefines_h */

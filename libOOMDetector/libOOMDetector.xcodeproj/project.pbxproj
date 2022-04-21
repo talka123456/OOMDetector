@@ -228,12 +228,12 @@
 		6B9A04701FD57C8A00414B1F /* stack */ = {
 			isa = PBXGroup;
 			children = (
-				4A212CA8206259D6001960DA /* RapidCRC.c */,
-				4A212CA9206259D6001960DA /* RapidCRC.h */,
-				6B9A04731FD57C8A00414B1F /* CStackHelper.h */,
-				6B9A04741FD57C8A00414B1F /* CStackHelper.mm */,
 				6B9A04751FD57C8A00414B1F /* CommonMallocLogger.h */,
 				6B9A04761FD57C8A00414B1F /* CommonMallocLogger.mm */,
+				6B9A04731FD57C8A00414B1F /* CStackHelper.h */,
+				6B9A04741FD57C8A00414B1F /* CStackHelper.mm */,
+				4A212CA8206259D6001960DA /* RapidCRC.c */,
+				4A212CA9206259D6001960DA /* RapidCRC.h */,
 			);
 			path = stack;
 			sourceTree = "<group>";
